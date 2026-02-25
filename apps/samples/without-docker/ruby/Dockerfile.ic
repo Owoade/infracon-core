@@ -1,0 +1,6 @@
+FROM ruby:3.1-alpine
+WORKDIR /app
+COPY . .
+RUN gem install webrick --no-document
+EXPOSE 8000
+CMD ["ruby", "server.rb"]

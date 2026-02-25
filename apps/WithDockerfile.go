@@ -18,7 +18,7 @@ import (
 	"github.com/docker/go-connections/nat"
 )
 
-func DeployApplicationWithDocker(payload IDeployApplicationWithDocker) error {
+func DeployApplicationWithDockerfile(payload IDeployApplicationWithDocker) error {
 	if !PathExists(payload.FilePath, "folder") {
 		return errors.New("applications folder doesn't exist")
 	}
@@ -42,7 +42,7 @@ func DeployApplicationWithDocker(payload IDeployApplicationWithDocker) error {
 	imageName := fmt.Sprintf("infracon-app-test-%d:latest", time.Now().UnixMilli())
 	resp, err := cli.ImageBuild(context.Background(), buildContext, types.ImageBuildOptions{
 		Tags:       []string{imageName},
-		Dockerfile: "Dockerfile",
+		Dockerfile: payload.DockerfileName,
 		Remove:     true,
 	})
 	if err != nil {
@@ -60,7 +60,7 @@ func DeployApplicationWithDocker(payload IDeployApplicationWithDocker) error {
 			containerPort: []nat.PortBinding{
 				{
 					HostIP:   "0.0.0.0",
-					HostPort: "3000",
+					HostPort: strconv.Itoa(payload.HostPort),
 				},
 			},
 		},

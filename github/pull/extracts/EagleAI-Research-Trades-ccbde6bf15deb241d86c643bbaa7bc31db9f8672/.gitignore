@@ -1,0 +1,13 @@
+tmp
+*.toml
+*.conf
+.env*
+*.certificates
+/certs
+**/*/node_modules
+*.db
+*.venv
+*.log
+.vscode
+scripts.txt
+__pycache__

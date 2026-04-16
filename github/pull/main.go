@@ -20,26 +20,30 @@ type PullfromGithub struct {
 }
 
 func main() {
-	if err := pullFromGithub(PullfromGithub{
-		Repo:        "once",
-		Ref:         "master",
-		Owner:       "owoade",
+	commitHash, err := pullFromGithub(PullfromGithub{
+		Repo:        "SMOOTH-BALLOT-BE",
+		Ref:         "main",
+		Owner:       "BAMSSA-DEVS",
 		AccessToken: os.Getenv("GITHUB_ACCESS_TOKEN"),
-	}); err != nil {
+	})
+
+	if err != nil {
 		panic(err)
 	}
+
+	fmt.Println("commit hash: ", commitHash)
 }
 
-func pullFromGithub(p PullfromGithub) error {
+func pullFromGithub(p PullfromGithub) (commitHash string, err error) {
 	if p.AccessToken == "" {
-		return errors.New("GITHUB_ACCESS_TOKEN is not set")
+		return "", errors.New("GITHUB_ACCESS_TOKEN is not set")
 	}
 
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/zipball/%s", p.Owner, p.Repo, p.Ref)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	req.Header.Set("Accept", "application/vnd.github+json")
@@ -49,31 +53,31 @@ func pullFromGithub(p PullfromGithub) error {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return err
+		return "", err
 	}
 
 	var buf bytes.Buffer
 	size, err := io.Copy(&buf, resp.Body)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	r, err := zip.NewReader(bytes.NewReader(buf.Bytes()), size)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	for _, f := range r.File {
-		dest := filepath.Join("extracts", p.Repo)
+		dest := filepath.Join("extracts", "")
 		fpath := filepath.Join(dest, f.Name)
 
 		if !strings.HasPrefix(fpath, filepath.Clean(dest)+string(os.PathSeparator)) {
-			return fmt.Errorf("illegal file path: %s", fpath)
+			return "", fmt.Errorf("illegal file path: %s", fpath)
 		}
 
 		if f.FileInfo().IsDir() {
@@ -82,27 +86,27 @@ func pullFromGithub(p PullfromGithub) error {
 		}
 
 		if err := os.MkdirAll(filepath.Dir(fpath), os.ModePerm); err != nil {
-			return err
+			return "", err
 		}
 
 		inFile, err := f.Open()
 		if err != nil {
-			return err
+			return "", err
 		}
 
 		outFile, err := os.OpenFile(fpath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
 		if err != nil {
 			inFile.Close()
-			return err
+			return "", err
 		}
 
 		_, err = io.Copy(outFile, inFile)
 		inFile.Close()
 		outFile.Close()
 		if err != nil {
-			return err
+			return "", err
 		}
 	}
 
-	return nil
+	return r.Comment, nil
 }

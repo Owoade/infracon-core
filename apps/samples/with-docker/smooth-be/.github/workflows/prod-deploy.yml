@@ -1,0 +1,71 @@
+name: SSH Deployment
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+    
+    # - name: Build
+    #   run: |
+    #     npm install 
+    #     docker build \
+    #         -t smooth-ballot-be \
+    #         --build-arg NODE_ENV=${{ secrets.NODE_ENV }} \
+    #         --build-arg REDIS_URL=${{ secrets.REDIS_URL }} \
+    #         --build-arg PLUNK_SECRET_KEY=${{ secrets.PLUNK_SECRET_KEY }} \
+    #         --build-arg PLUNK_SECRET_KEY_TWO=${{ secrets.PLUNK_SECRET_KEY_TWO }} \
+    #         --build-arg DATABASE_USER=${{ secrets.DATABASE_USER }} \
+    #         --build-arg DATABASE_NAME=${{ secrets.DATABASE_NAME }} \
+    #         --build-arg DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }} \
+    #         --build-arg DATABASE_HOST=${{ secrets.DATABASE_HOST }} \
+    #         --build-arg DATABASE_PORT=${{ secrets.DATABASE_PORT }} \
+    #         --build-arg TOKEN_PASSPHRASE=${{ secrets.TOKEN_PASSPHRASE }} \
+    #         --build-arg POSTGRES_ENCRYPTION_SECRET=${{ secrets.POSTGRES_ENCRYPTION_SECRET }} \
+    #         --build-arg AWS_ACCESS_KEY=${{ secrets.AWS_ACCESS_KEY }} \
+    #         --build-arg AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} \
+    #         --build-arg AWS_STORAGE_BUCKET_REGION=${{ secrets.AWS_STORAGE_BUCKET_REGION }} \
+    #         --build-arg QUEUE_REDIS_HOST=${{ secrets.QUEUE_REDIS_HOST }} \
+    #         --build-arg QUEUE_REDIS_PORT=${{ secrets.QUEUE_REDIS_PORT }} \
+    #         --build-arg QUEUE_REDIS_PASSWORD=${{ secrets.QUEUE_REDIS_PASSWORD }} \
+    #         --build-arg VOTER_PLATFORM=${{ secrets.VOTER_PLATFORM }} \
+    #         --build-arg PAYSTACK_SECRET_KEY=${{ secrets.PAYSTACK_SECRET_KEY }} \
+    #         --build-arg OTERS_ENCRYPTION_KEY=${{ secrets.OTERS_ENCRYPTION_KEY }} \
+    #         --build-arg WEBMAIL_PASSWORD=${{ secrets.WEBMAIL_PASSWORD }} \
+    #         --build-arg TEST_DATABASE_USER=${{ secrets.TEST_DATABASE_USER }} \
+    #         --build-arg TEST_DATABASE_PASSWORD=${{ secrets.TEST_DATABASE_PASSWORD }} \
+    #         --build-arg TEST_DATABSE_NAME=${{ secrets.TEST_DATABSE_NAME }} \
+    #         --build-arg MONGODB_URL=${{ secrets.MONGODB_URL }} \
+    #         --build-arg S3_ENDPOINT=${{ secrets.S3_ENDPOINT }} .
+
+    #     docker run -d -p 3000:3000 smooth-ballot-be
+    #     node health.js
+    
+    - name: Download Dependencies and Generate Build
+      run: |
+        npm install && npm run build
+
+    - name: Create SSH directory and known_hosts file
+      run: |
+        mkdir -p ~/.ssh
+        touch ~/.ssh/known_hosts
+        touch ~/.ssh/id_rsa
+        touch ~/.ssh/id_rsa.pub
+        pwd
+    - name: Run SSH command
+      run: |
+        ssh-keyscan -H ${{ secrets.SSH_PROD_HOST }} >> ~/.ssh/known_hosts
+        echo "${{ secrets.SSH_PROD_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        echo "${{ secrets.SSH_PROD_PUBLIC_KEY }}" > ~/.ssh/id_rsa.pub
+        chmod 600 ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa.pub
+        rsync -avz --exclude='node_modules/' --exclude='.git/' /home/runner/work/SMOOTH-BALLOT-BE/SMOOTH-BALLOT-BE/ owoade@${{ secrets.SSH_PROD_HOST }}:~/SMOOTH-BALLOT-BE/
+        ssh owoade@${{ secrets.SSH_PROD_HOST }} "cd SMOOTH-BALLOT-BE && npm install && npm run migrate:prod && pm2 restart api && pm2 restart api-2 && pm2 restart api-3"
+

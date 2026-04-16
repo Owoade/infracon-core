@@ -1,62 +1,72 @@
 import express from "express";
-import axios from "axios";
 import dotenv from "dotenv";
+import {
+  getRepos,
+  getBranches,
+  downloadRepoZip
+} from "./github.js";
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
 
-app.get("/", (req, res) => {
-  res.send(`<a href="/auth/github">Login with GitHub</a>`);
-});
-
-// Step 1: Redirect user to GitHub for authorization
+// Step 1: Redirect user to GitHub App install page
 app.get("/auth/github", (req, res) => {
-  const redirectUrl = `https://github.com/login/oauth/authorize?client_id=${process.env.GITHUB_CLIENT_ID}&scope=read:user user:email`;
-  res.redirect(redirectUrl);
+  const url = `https://github.com/apps/INFRACON/installations/new`;
+  res.redirect(url);
 });
 
-// Step 2: GitHub redirects back with a code
+// Step 2: GitHub redirects here after installation
 app.get("/auth/github/callback", async (req, res) => {
-  const code = req.query.code;
-
-  if (!code) {
-    return res.status(400).send("Code not provided");
+  const { installation_id } = req.query;
+  console.log(req.query, req.body)
+  if (!installation_id) {
+    return res.status(400).send("Missing installation_id");
   }
 
+  res.send({
+    message: "GitHub App installed successfully",
+    installation_id,
+  });
+});
+
+// Step 3: Get repos
+app.get("/repos/:installationId", async (req, res) => {
   try {
-    // Step 3: Exchange code for access token
-    const tokenResponse = await axios.post(
-      "https://github.com/login/oauth/access_token",
-      {
-        client_id: process.env.GITHUB_CLIENT_ID,
-        client_secret: process.env.GITHUB_CLIENT_SECRET,
-        code,
-      },
-      {
-        headers: { Accept: "application/json" },
-      }
+    const repos = await getRepos(req.params.installationId);
+    res.json(repos);
+  } catch (err) {
+    console.error(err.response?.data || err.message);
+    res.status(500).send("Failed to fetch repos");
+  }
+});
+
+// Step 4: Get branches
+app.get("/branches/:installationId/:owner/:repo/:branch", async (req, res) => {
+  try {
+    const { installationId, owner, repo } = req.params;
+
+    const branches = await getBranches(
+      installationId,
+      owner,
+      repo
     );
 
-    const accessToken = tokenResponse.data.access_token;
-
-    if (!accessToken) {
-      return res.status(400).send("Failed to get access token");
-    }
-
-    // Optional: Get user info
-    const userResponse = await axios.get("https://api.github.com/user", {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-
-    res.json({ accessToken, user: userResponse.data });
-  } catch (error) {
-    console.error(error.response?.data || error.message);
-    res.status(500).send("GitHub OAuth failed");
+    res.json(branches);
+  } catch (err) {
+    console.error(err.response?.data || err.message);
+    res.status(500).send("Failed to fetch branches");
   }
 });
 
-app.listen(3000, () => {
-  console.log(`Server running on http://localhost:3000`);
+app.get("/repo/download/:installationId/:owner/:repo/:branch", async (req, res)=>{
+  console.log("in controller")
+  const { installationId, owner, repo, branch } = req.params;
+  const value = downloadRepoZip(installationId, owner, repo, branch)
+  res.send(value)
+})
+
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
 });

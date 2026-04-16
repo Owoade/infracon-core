@@ -1,0 +1,117 @@
+export default function contest_refund_email_template(
+  payload: RefundEmailPayload,
+) {
+  return `
+        <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vote Confirmation</title>
+
+    <style type="text/css">
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue",
+          sans-serif;
+        font-size: 12px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      .wrapper {
+        background: #f0f1f5;
+        padding: 1em 0;
+        width: 100%;
+        height: 100vh;
+      }
+
+      .center-1 {
+        text-align: left;
+        background-color: white;
+        border-radius: 10px;
+        max-width: 500px;
+        margin: 1em auto;
+        padding: 1em 1.5em;
+        color: #1f1f1f;
+      }
+
+      .center-2 {
+        color: #727586;
+        margin-top: 2em;
+      }
+
+      .center-2 span {
+        color: #a6abb5;
+      }
+
+      h2 {
+        color: #01356f;
+      }
+      img {
+        width: 100px;
+        margin: 1em 0;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="wrapper">
+      <center class="center-1">
+        <img
+          src="https://res.cloudinary.com/dles2mycv/image/upload/v1717850775/smooth-ballot-logo_2_mtiavw.png"
+          alt="Smooth Ballot Logo"
+        />
+
+        <h3>ACTION REQUIRED</h3>
+        <p>Dear ${payload.name},</p>
+        <p class="mini-text">
+          Thank you for participating in the ${payload.contest_name} on
+          SmoothBallot.
+        </p>
+        <p class="mini-text">
+          We observed that your vote was confirmed after the contest had ended.
+          As part of our transparency and fairness commitment, we’ve initiated a
+          refund for your payment.
+        </p>
+        <p class="mini-text">
+          To complete the process, please provide your bank details securely via
+          the link below:
+        </p>
+        <a href="${payload.add_bank_details_link}" class="mini-text"
+          >Submit Bank Details</a
+        >
+        <p class="mini-text">
+          Once submitted, you’ll be able to track the status of your refund
+          here:
+        </p>
+        <a href="${payload.track_refund_link}" class="mini-text"
+          >Track Refund</a
+        >
+        <p class="mini-text">
+          If you have any questions or need assistance, please don't hesitate to
+          contact our
+          <a href="mailto:owoadeanuoluwapo2@gmail.com">support team.</a>
+        </p>
+        <div style="line-height: 0.6em; margin: 2em 0 2em 0">
+          <p>Thank you for choosing Smooth Ballot</p>
+          <span>The Smooth Team.</span>
+        </div>
+      </center>
+    </div>
+  </body>
+</html>
+
+    `;
+}
+
+export interface RefundEmailPayload {
+  name: string; // Voter's full name or first name
+  contest_name: string; // Name of the contest
+  add_bank_details_link: string; // URL for submitting bank details
+  track_refund_link: string; // URL to track refund status
+}
